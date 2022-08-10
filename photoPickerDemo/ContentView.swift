@@ -10,15 +10,14 @@ import PhotosUI
 
 struct ContentView: View {
     @State private var selectedItem: PhotosPickerItem?
-    @State private var selectedImage: Image?
+    @State private var data: Data?
     
     var body: some View {
         VStack {
-            if let selectedImage {
-                selectedImage
+            if let data, let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
                     .resizable()
                     .frame(width: 200, height: 200)
-                    .foregroundColor(.gray.opacity(0.5))
                     .padding()
             }
             else {
@@ -30,10 +29,17 @@ struct ContentView: View {
             }
          PhotosPicker("Pick Photo", selection: $selectedItem)
             .onChange(of: selectedItem) { newValue in
-                Task{
-                    if let imageData = try? await newValue?
-                        .loadTransferable(type: Data.self), let image = UIImage(data: imageData) {
-                        selectedImage = Image(uiImage: image)
+                guard let item = selectedItem else { return }
+                item.loadTransferable(type: Data.self) { result in
+                    switch result {
+                    case .success(let data):
+                        if let data {
+                            self.data = data
+                        } else {
+                            print("There is no data")
+                        }
+                    case .failure(let failure):
+                        fatalError("\(failure)")
                     }
                 }
             }
